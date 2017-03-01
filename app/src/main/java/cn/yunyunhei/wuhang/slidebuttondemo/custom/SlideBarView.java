@@ -1,6 +1,7 @@
 package cn.yunyunhei.wuhang.slidebuttondemo.custom;
 
 import android.content.Context;
+import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
@@ -16,6 +17,8 @@ import cn.yunyunhei.wuhang.slidebuttondemo.R;
 
 /**
  * 用于例如相机页面调节曝光度的滑块，或者可以用于调节屏幕亮度的滑块
+ * <p>
+ * 控件测量方面并没有重写，所以使用一定要设置宽高,不能使用wrap_content
  * <p>
  * Created by wuhang on 17/2/28.
  */
@@ -33,8 +36,14 @@ public class SlideBarView extends View {
     //绘制的文字的默认文本
     private static final String Default_Draw_Text = "0.0";
 
+    //绘制的文字的默认大小
+    private static final int Default_Text_Font_Size = 30;
+
+    //绘制的文字的默认的中心距离右侧的距离
+    private static final int Default_Text_Right_Margin = 40;
+
     //字体大小
-    private int textFontSize = 30;
+    private int mTextFontSize = Default_Text_Font_Size;
 
     //绘制线条以及图片的画笔
     private Paint mPaint;
@@ -46,8 +55,8 @@ public class SlideBarView extends View {
     private float mTextY;
 
     //文字中心距离右侧的距离
-    private int mTextCenterRightMargin = 40;
-
+    private int mTextCenterRightMargin = Default_Text_Right_Margin;
+    //需要绘制的文本内容
     private String mDrawText = Default_Draw_Text;
 
 
@@ -195,10 +204,26 @@ public class SlideBarView extends View {
 
     public SlideBarView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init();
+        init(context,attrs,defStyleAttr);
     }
 
-    private void init() {
+    private void init(Context context, AttributeSet attrs,int defStyleAttr) {
+        if (attrs != null){
+            TypedArray typedArray = context.getTheme().obtainStyledAttributes(attrs, R.styleable.SlideBarView, defStyleAttr, 0);
+            int n = typedArray.getIndexCount();
+            for (int i = 0 ; i < n ; i ++){
+                int attr = typedArray.getIndex(i);
+                switch (attr){
+                    case R.styleable.SlideBarView_slideBarTextSize:
+                        mTextFontSize = typedArray.getDimensionPixelSize(attr,Default_Text_Font_Size);
+                        break;
+                    case R.styleable.SlideBarView_slideBarTextRightSpace:
+                        mTextCenterRightMargin = typedArray.getDimensionPixelSize(attr,Default_Text_Right_Margin);
+                        break;
+                }
+            }
+            typedArray.recycle();
+        }
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaint.setColor(colorDefault);
         paddingRight = getPaddingRight();
@@ -209,7 +234,7 @@ public class SlideBarView extends View {
         mTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
 
         mTextPaint.setTextAlign(Paint.Align.CENTER);
-        mTextPaint.setTextSize(textFontSize);
+        mTextPaint.setTextSize(mTextFontSize);
         mTextPaint.setColor(colorDefault);
 
         log(String.format("getPadding paddingLeft : %s , paddingRight : %s , paddingTop : %s , paddingBottom : %s ", paddingLeft, paddingRight, paddingTop, paddingBottom));

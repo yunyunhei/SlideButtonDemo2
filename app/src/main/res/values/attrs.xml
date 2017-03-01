@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <attr name="slideBarTextSize" format="dimension"/>
+    <attr name="slideBarTextRightSpace" format="dimension"/>
+
+    <declare-styleable name="SlideBarView">
+        <attr name="slideBarTextSize"/>
+        <attr name="slideBarTextRightSpace"/>
+    </declare-styleable>
+</resources>
