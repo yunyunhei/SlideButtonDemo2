@@ -5,6 +5,7 @@ import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
 import android.support.v4.content.ContextCompat;
 import android.text.TextPaint;
@@ -85,6 +86,26 @@ public class SlideBarView extends View {
     //中间的图片
     private Bitmap mBitmap = BitmapFactory.decodeResource(getResources(), R.mipmap.icon_20_effect_bright);
 
+    //复习旧知识，添加颜色矩阵，使用同一张图片，展示不同颜色效果
+    float[] src = new float[]{
+            1, 0, 0, 0, 0,
+            0, 1, 0, 0, 0,
+            0, 0, 1, 0, 0,
+            0, 0, 0, 1, 0};
+
+    float[] white = new float[]{
+            1, 0, 0, 0, 255,
+            0, 1, 0, 0, 255,
+            0, 0, 1, 0, 255,
+            0, 0, 0, 1, 0};
+
+    float[] gold = new float[]{
+            0, 0, 0, 0, 174,
+            0, 0, 0, 0, 153,
+            0, 0, 0, 0, 90,
+            0, 0, 0, 1, 0};
+
+
     //图片绘制时的左边和顶部的坐标
     private int mBitmapLeft = 0;
     private int mBitmapTop = 0;
@@ -116,6 +137,12 @@ public class SlideBarView extends View {
     private int paddingTop;
     private int paddingBottom;
 
+
+    private CallBack mCallBack;
+
+    public void setCallBack(CallBack callBack) {
+        mCallBack = callBack;
+    }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
@@ -204,21 +231,21 @@ public class SlideBarView extends View {
 
     public SlideBarView(Context context, AttributeSet attrs, int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        init(context,attrs,defStyleAttr);
+        init(context, attrs, defStyleAttr);
     }
 
-    private void init(Context context, AttributeSet attrs,int defStyleAttr) {
-        if (attrs != null){
+    private void init(Context context, AttributeSet attrs, int defStyleAttr) {
+        if (attrs != null) {
             TypedArray typedArray = context.getTheme().obtainStyledAttributes(attrs, R.styleable.SlideBarView, defStyleAttr, 0);
             int n = typedArray.getIndexCount();
-            for (int i = 0 ; i < n ; i ++){
+            for (int i = 0; i < n; i++) {
                 int attr = typedArray.getIndex(i);
-                switch (attr){
+                switch (attr) {
                     case R.styleable.SlideBarView_slideBarTextSize:
-                        mTextFontSize = typedArray.getDimensionPixelSize(attr,Default_Text_Font_Size);
+                        mTextFontSize = typedArray.getDimensionPixelSize(attr, Default_Text_Font_Size);
                         break;
                     case R.styleable.SlideBarView_slideBarTextRightSpace:
-                        mTextCenterRightMargin = typedArray.getDimensionPixelSize(attr,Default_Text_Right_Margin);
+                        mTextCenterRightMargin = typedArray.getDimensionPixelSize(attr, Default_Text_Right_Margin);
                         break;
                 }
             }
@@ -226,6 +253,7 @@ public class SlideBarView extends View {
         }
         mPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         mPaint.setColor(colorDefault);
+        mPaint.setColorFilter(new ColorMatrixColorFilter(white));
         paddingRight = getPaddingRight();
         paddingLeft = getPaddingLeft();
         paddingTop = getPaddingTop();
@@ -278,6 +306,11 @@ public class SlideBarView extends View {
 
     @Override
     public boolean onTouchEvent(MotionEvent event) {
+
+        if (getVisibility() != VISIBLE) {
+            return false;
+        }
+
         float eventX = event.getX();
         float eventY = event.getY();
 
@@ -287,6 +320,9 @@ public class SlideBarView extends View {
 //                    down_x = event.getX();
                     down_y = event.getY();
                     down_bitmap_top = mBitmapTop;
+                    if (mCallBack != null) {
+                        mCallBack.onDownTouch();
+                    }
                     log(String.format("ACTION_DOWN eventX : %s , eventY : %s , move_left_slide : %s , ", eventX, eventY, move_left_slide));
                     return true;
                 }
@@ -294,6 +330,9 @@ public class SlideBarView extends View {
             case MotionEvent.ACTION_CANCEL:
                 log(String.format("ACTION_CANCEL eventX : %s , eventY : %s", eventX, eventY));
                 restoreDefaultColor();
+                if (mCallBack != null) {
+                    mCallBack.onCancelOrUpTouch();
+                }
                 break;
             case MotionEvent.ACTION_MOVE:
                 float changed_y = eventY - down_y;
@@ -303,6 +342,9 @@ public class SlideBarView extends View {
             case MotionEvent.ACTION_UP:
                 log(String.format("ACTION_UP eventX : %s , eventY : %s", eventX, eventY));
                 restoreDefaultColor();
+                if (mCallBack != null) {
+                    mCallBack.onCancelOrUpTouch();
+                }
                 break;
         }
         return super.onTouchEvent(event);
@@ -361,12 +403,18 @@ public class SlideBarView extends View {
         postInvalidate();
     }
 
+    /*
+    -0.2~0.2,显示为0
+    0.2~0.3，显示为0.1
+    2.0~2.1,显示为1.9
+    2.1，显示为2
+     */
     private String getDrawText(float percent) {
         if (Math.abs(percent) <= 0.2f) {
             mPaint.setColor(colorDefault);
             mTextPaint.setColor(colorDefault);
-
-            //当滑动到这部分区域是，使图片顶部的位置强制在这个地方，形成一种磁力的效果
+            mPaint.setColorFilter(new ColorMatrixColorFilter(white));
+            //当滑动到这部分区域时，使图片顶部的位置强制在这个地方，形成一种磁力的效果
             mBitmapTop = mBitmapDefaultTop;
             mFirstLineEndY = mBitmapTop - drawLineSpace;
             mSecondLineStartY = mBitmapTop + mBitmapHeight + drawLineSpace;
@@ -378,11 +426,16 @@ public class SlideBarView extends View {
             log(String.format("FontMetrics bottom : %s , top : %s ", bottom, top));
             mTextY = (bottom - top) / 2 + mBitmapTop + mBitmapHeight / 2 - bottom;
 
+            if (mCallBack != null) {
+                mCallBack.onValueChanged(Float.valueOf(Default_Draw_Text));
+            }
+
             return Default_Draw_Text;
         }
 
         mPaint.setColor(colorChange);
         mTextPaint.setColor(colorChange);
+        mPaint.setColorFilter(new ColorMatrixColorFilter(gold));
 
         //记录数据的正负号
         int sign = percent > 0 ? 1 : -1;
@@ -396,6 +449,10 @@ public class SlideBarView extends View {
         //将结果转换成保留一位小数，直接用于展示
         float result = ((float) value) / 10;
 
+        if (mCallBack != null) {
+            mCallBack.onValueChanged(-sign * result);
+        }
+
         return String.format("%s%s", (sign == 1 ? "-" : "+"), result);
     }
 
@@ -404,4 +461,15 @@ public class SlideBarView extends View {
             Log.d("SlideBarView", content);
         }
     }
+
+
+    public interface CallBack {
+        void onDownTouch();
+
+        void onCancelOrUpTouch();
+
+        //回调的值的范围是[-2.0~2.0]
+        void onValueChanged(float value);
+    }
 }
+
